@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
 
 import api from '../service/api';
+import Card from '../components/card';
 
 export default class Main extends Component {
   static navigationOptions = {
@@ -12,6 +13,7 @@ export default class Main extends Component {
     docs: [],
     productInfo: {},
     page: 1,
+    loading: false,
   };
 
   componentDidMount() {
@@ -19,13 +21,20 @@ export default class Main extends Component {
   }
 
   loadProducts = async (page = 1) => {
-    const response = await api.get(`/products?page=${page}`);
-    const { docs, ...productInfo } = response.data;
-
-    this.setState({ 
-      docs: [...this.state.docs, ...docs], 
-      productInfo, 
-      page });
+    try {
+      this.setState({ loading: true });
+      const response = await api.get(`/products?page=${page}`);
+      const { docs, ...productInfo } = response.data;
+  
+      this.setState({ 
+        docs: [...this.state.docs, ...docs], 
+        productInfo, 
+        page,
+        loading: false, 
+      });
+    } catch(err) {
+      this.setState({ loading: false });
+    }
   }
 
   loadMore = () => {
@@ -37,24 +46,16 @@ export default class Main extends Component {
     this.loadProducts(pageNumber);
   }
 
-  renderItem = ({ item }) => (
-    <View style={styles.productContainer}>
-      <Text style={styles.productTitle}>{item.title}</Text>
-      <Text style={styles.productDescription}>{item.description}</Text>
-
-      <TouchableOpacity 
-        onPress={() => {
-          this.props.navigation.navigate("Product", { product: item });
-        }}
-        style={styles.productButton}>
-        <Text style={styles.productButtonText}>Acessar</Text>
-      </TouchableOpacity>
-    </View>
-  )
+  renderItem = ({ item }) => (<Card item={item} navigation={this.props.navigation} />)
 
   render() {
     return (
       <View style={styles.container}>
+        <ActivityIndicator 
+          size="large" 
+          color="#0000ff" 
+          animating={this.state.loading}
+          style={styles.loading} />
         <FlatList 
           data={this.state.docs}
           keyExtractor={item => item._id}
@@ -76,38 +77,8 @@ const styles = StyleSheet.create({
   list: {
     padding: 20,
   },
-  productContainer: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    padding: 20,
-    marginBottom: 20,
-  },
-  productTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333"
-  },
-  productDescription: {
-    fontSize: 16,
-    color: "#999",
-    marginTop: 5,
-    lineHeight: 24,
-  },
-  productButton: {
-    height: 42,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: "#da552f",
-    backgroundColor: "transparent",
+  loading: {
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
-  },
-  productButtonText: {
-    fontSize: 16,
-    color: "#da552f",
-    fontWeight: "bold",
   }
 });
